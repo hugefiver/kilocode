@@ -221,7 +221,10 @@ describe("Task reasoning preservation", () => {
 
 		// Simulate what happens in the streaming loop when preserveReasoning is true
 		let finalAssistantMessage = assistantMessage
-		if (reasoningMessage && task.api.getModel().info.preserveReasoning) {
+		const modelResult = task.api.getModel() // kilocode_change
+		const modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info // kilocode_change
+		if (reasoningMessage && modelInfo.preserveReasoning) {
+			// kilocode_change
 			finalAssistantMessage = `<think>${reasoningMessage}</think>\n${assistantMessage}`
 		}
 
@@ -289,7 +292,10 @@ describe("Task reasoning preservation", () => {
 
 		// Simulate what happens in the streaming loop when preserveReasoning is false
 		let finalAssistantMessage = assistantMessage
-		if (reasoningMessage && task.api.getModel().info.preserveReasoning) {
+		const modelResult = task.api.getModel() // kilocode_change
+		const modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info // kilocode_change
+		if (reasoningMessage && modelInfo.preserveReasoning) {
+			// kilocode_change
 			finalAssistantMessage = `<think>${reasoningMessage}</think>\n${assistantMessage}`
 		}
 
@@ -347,7 +353,10 @@ describe("Task reasoning preservation", () => {
 
 		// Simulate what happens in the streaming loop
 		let finalAssistantMessage = assistantMessage
-		if (reasoningMessage && task.api.getModel().info.preserveReasoning) {
+		const modelResult = task.api.getModel() // kilocode_change
+		const modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info // kilocode_change
+		if (reasoningMessage && modelInfo.preserveReasoning) {
+			// kilocode_change
 			finalAssistantMessage = `<think>${reasoningMessage}</think>\n${assistantMessage}`
 		}
 
@@ -399,7 +408,10 @@ describe("Task reasoning preservation", () => {
 
 		// Simulate what happens in the streaming loop
 		let finalAssistantMessage = assistantMessage
-		if (reasoningMessage && task.api.getModel().info.preserveReasoning) {
+		const modelResult = task.api.getModel() // kilocode_change
+		const modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info // kilocode_change
+		if (reasoningMessage && modelInfo.preserveReasoning) {
+			// kilocode_change
 			finalAssistantMessage = `<think>${reasoningMessage}</think>\n${assistantMessage}`
 		}
 
