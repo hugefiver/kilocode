@@ -36,9 +36,15 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 		const { askApproval, handleError, pushToolResult, toolProtocol } = callbacks
 		let { path: relPath, diff: diffContent } = params
 
-		if (diffContent && !task.api.getModel().id.includes("claude")) {
-			diffContent = unescapeHtmlEntities(diffContent)
+		// kilocode_change start: Handle async getModel()
+		if (diffContent) {
+			const modelResult = task.api.getModel()
+			const modelId = modelResult instanceof Promise ? (await modelResult).id : modelResult.id
+			if (!modelId.includes("claude")) {
+				diffContent = unescapeHtmlEntities(diffContent)
+			}
 		}
+		// kilocode_change end
 
 		try {
 			if (!relPath) {
