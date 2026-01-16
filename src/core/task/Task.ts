@@ -535,8 +535,26 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			// For new tasks, resolve and lock the tool protocol immediately.
 			// This ensures the task will continue using this protocol even if
 			// user settings change.
-			const modelInfo = this.api.getModel().info
-			this._taskToolProtocol = resolveToolProtocol(this.apiConfiguration, modelInfo)
+			// kilocode_change start: Handle async getModel() for VsCodeLmHandler
+			const modelResult = this.api.getModel()
+			if (modelResult instanceof Promise) {
+				// For async providers (like VsCodeLmHandler), defer protocol resolution
+				this._taskToolProtocol = undefined
+				modelResult.then((model) => {
+					if (!this._taskToolProtocol) {
+						this._taskToolProtocol = resolveToolProtocol(this.apiConfiguration, model.info)
+					}
+				}).catch((error) => {
+					console.error("Failed to resolve tool protocol from async model:", error)
+					// Fallback to default XML protocol
+					this._taskToolProtocol = "xml"
+				})
+			} else {
+				// For sync providers, resolve immediately
+				const modelInfo = modelResult.info
+				this._taskToolProtocol = resolveToolProtocol(this.apiConfiguration, modelInfo)
+			}
+			// kilocode_change end
 		}
 
 		// Initialize the assistant message parser based on the locked tool protocol.
@@ -682,6 +700,37 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			provider.log(errorMessage)
 		}
 	}
+
+	// kilocode_change start: Helper to get model info handling both sync and async getModel
+	/**
+	 * Gets model information from the API handler, handling both synchronous and asynchronous providers.
+	 * This is needed because some providers (like VsCodeLmHandler) have async initialization.
+	 * 
+	 * @private
+	 * @returns Promise resolving to ModelInfo
+	 */
+	private async getModelInfo(): Promise<ModelInfo> {
+		const result = this.api.getModel()
+		if (result instanceof Promise) {
+			return (await result).info
+		}
+		return result.info
+	}
+
+	/**
+	 * Gets model ID from the API handler, handling both synchronous and asynchronous providers.
+	 * 
+	 * @private
+	 * @returns Promise resolving to model ID string
+	 */
+	private async getModelId(): Promise<string> {
+		const result = this.api.getModel()
+		if (result instanceof Promise) {
+			return (await result).id
+		}
+		return result.id
+	}
+	// kilocode_change end
 
 	/**
 	 * Sets up a listener for provider profile changes to automatically update the parser state.
@@ -1953,7 +2002,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				this._taskToolProtocol = detectedProtocol
 			} else {
 				// No tool calls in history yet - use current settings
-				const modelInfo = this.api.getModel().info
+				const modelInfo = await this.getModelInfo() // kilocode_change: Use helper to handle async getModel
 				this._taskToolProtocol = resolveToolProtocol(this.apiConfiguration, modelInfo)
 			}
 
@@ -3880,7 +3929,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			const modeSupportsBrowser = modeConfig?.groups.some((group) => getGroupName(group) === "browser") ?? false
 
 			// Check if model supports browser capability (images)
-			const modelInfo = this.api.getModel().info
+			const modelInfo = await this.getModelInfo() // kilocode_change: Use helper to handle async getModel
 			const modelSupportsBrowser = (modelInfo as any)?.supportsImages === true
 
 			const canUseBrowserTool = modelSupportsBrowser && modeSupportsBrowser && (browserToolEnabled ?? true)
@@ -3948,10 +3997,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			await this.api.initialize()
 		}
 		// kilocode_change end
-		const modelInfo = this.api.getModel().info
+		const modelInfo = await this.getModelInfo() // kilocode_change: Use helper to handle async getModel
 
 		const maxTokens = getModelMaxOutputTokens({
-			modelId: this.api.getModel().id,
+			modelId: await this.getModelId(), // kilocode_change: Use helper to handle async getModel
 			model: modelInfo,
 			settings: this.apiConfiguration,
 		})
@@ -3963,7 +4012,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		// Log the context window error for debugging
 		console.warn(
-			`[Task#${this.taskId}] Context window exceeded for model ${this.api.getModel().id}. ` +
+			`[Task#${this.taskId}] Context window exceeded for model ${await this.getModelId()}. ` + // kilocode_change: Use helper to handle async getModel
 				`Current tokens: ${contextTokens}, Context window: ${contextWindow}. ` +
 				`Forcing truncation to ${FORCED_CONTEXT_REDUCTION_PERCENT}% of current context.`,
 		)
@@ -4130,10 +4179,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				await this.api.adjustActiveHandler("Pre-Request Adjustment")
 			}
 			// kilocode_change end
-			const modelInfo = this.api.getModel().info
+			const modelInfo = await this.getModelInfo() // kilocode_change: Use helper to handle async getModel
 
 			const maxTokens = getModelMaxOutputTokens({
-				modelId: this.api.getModel().id,
+				modelId: await this.getModelId(), // kilocode_change: Use helper to handle async getModel
 				model: modelInfo,
 				settings: this.apiConfiguration,
 			})
@@ -4279,7 +4328,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// 2. Model supports native tools
 		// CRITICAL: Use the task's locked protocol to ensure tasks that started with XML
 		// tools continue using XML even if NTC settings have since changed.
-		const modelInfo = this.api.getModel().info
+		const modelInfo = await this.getModelInfo() // kilocode_change: Use helper to handle async getModel
 		const taskProtocol = this._taskToolProtocol ?? "xml"
 		const shouldIncludeTools = taskProtocol === TOOL_PROTOCOL.NATIVE && (modelInfo.supportsNativeTools ?? false)
 
