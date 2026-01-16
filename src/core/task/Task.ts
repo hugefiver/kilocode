@@ -3932,7 +3932,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			const modeSupportsBrowser = modeConfig?.groups.some((group) => getGroupName(group) === "browser") ?? false
 
 			// Check if model supports browser capability (images)
-			const modelInfo = await this.getModelInfo() // kilocode_change: Use helper to handle async getModel
+			const modelResult = this.api.getModel() // kilocode_change
+			const modelData = modelResult instanceof Promise ? await modelResult : modelResult // kilocode_change
+			const modelInfo = modelData.info // kilocode_change
+			const modelId = modelData.id // kilocode_change
 			const modelSupportsBrowser = (modelInfo as any)?.supportsImages === true
 
 			const canUseBrowserTool = modelSupportsBrowser && modeSupportsBrowser && (browserToolEnabled ?? true)
@@ -3976,7 +3979,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					isStealthModel: modelInfo?.isStealthModel,
 				},
 				undefined, // todoList
-				undefined, // modelId - will be resolved in SYSTEM_PROMPT // kilocode_change
+				modelId, // kilocode_change
 				provider.getSkillsManager(),
 				state, // kilocode_change
 			)
