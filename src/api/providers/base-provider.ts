@@ -19,7 +19,7 @@ export abstract class BaseProvider implements ApiHandler {
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream
 
-	abstract getModel(): { id: string; info: ModelInfo }
+	abstract getModel(): { id: string; info: ModelInfo } | Promise<{ id: string; info: ModelInfo }> // kilocode_change: Allow both sync and async getModel
 
 	/**
 	 * Converts an array of tools to be compatible with OpenAI's strict mode.

@@ -517,8 +517,16 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 		}
 	}
 
-	// Return model information based on the current client state
-	override getModel(): { id: string; info: ModelInfo } {
+	// kilocode_change start: Make getModel async to ensure client is initialized
+	/**
+	 * Returns model information. This method is now async to ensure the client is properly initialized.
+	 * The method will automatically wait for client initialization if it hasn't completed yet.
+	 * @returns Promise<{ id: string; info: ModelInfo }> The model ID and information
+	 */
+	override async getModel(): Promise<{ id: string; info: ModelInfo }> {
+		// Ensure client is initialized before returning model info
+		await this.initializeClient()
+		
 		if (this.client) {
 			// Validate client properties
 			const requiredProps = {
@@ -577,6 +585,76 @@ export class VsCodeLmHandler extends BaseProvider implements SingleCompletionHan
 			},
 		}
 	}
+	// kilocode_change end
+
+	/**
+	 * Synchronous version of getModel that returns model information without waiting for client initialization.
+	 * This method will return fallback model info if the client is not yet initialized.
+	 * 
+	 * @deprecated Use the async getModel() method instead for accurate model information.
+	 * This method is provided for backward compatibility only.
+	 * @returns { id: string; info: ModelInfo } The model ID and information (may be fallback data)
+	 */
+	getModelSync(): { id: string; info: ModelInfo } {
+		if (this.client) {
+			// Validate client properties
+			const requiredProps = {
+				id: this.client.id,
+				vendor: this.client.vendor,
+				family: this.client.family,
+				version: this.client.version,
+				maxInputTokens: this.client.maxInputTokens,
+			}
+
+			// Log any missing properties for debugging
+			for (const [prop, value] of Object.entries(requiredProps)) {
+				if (!value && value !== 0) {
+					console.warn(`Kilo Code <Language Model API>: Client missing ${prop} property`)
+				}
+			}
+
+			// Construct model ID using available information
+			const modelParts = [this.client.vendor, this.client.family, this.client.version].filter(Boolean)
+
+			const modelId = this.client.id || modelParts.join(SELECTOR_SEPARATOR)
+
+			// Build model info with conservative defaults for missing values
+			const modelInfo: ModelInfo = {
+				maxTokens: -1, // Unlimited tokens by default
+				contextWindow:
+					typeof this.client.maxInputTokens === "number"
+						? Math.max(0, this.client.maxInputTokens)
+						: openAiModelInfoSaneDefaults.contextWindow,
+				supportsImages: false, // VSCode Language Model API currently doesn't support image inputs
+				supportsPromptCache: true,
+				supportsNativeTools: true, // VSCode Language Model API supports native tool calling
+				defaultToolProtocol: "native", // Use native tool protocol by default
+				inputPrice: 0,
+				outputPrice: 0,
+				description: `VSCode Language Model: ${modelId}`,
+			}
+
+			return { id: modelId, info: modelInfo }
+		}
+
+		// Fallback when no client is available
+		const fallbackId = this.options.vsCodeLmModelSelector
+			? stringifyVsCodeLmModelSelector(this.options.vsCodeLmModelSelector)
+			: "vscode-lm"
+
+		console.debug("Kilo Code <Language Model API>: No client available, using fallback model info")
+
+		return {
+			id: fallbackId,
+			info: {
+				...openAiModelInfoSaneDefaults,
+				supportsNativeTools: true, // VSCode Language Model API supports native tool calling
+				defaultToolProtocol: "native", // Use native tool protocol by default
+				description: `VSCode Language Model (Fallback): ${fallbackId}`,
+			},
+		}
+	}
+	// kilocode_change - sync version for backward compatibility
 
 	async completePrompt(prompt: string): Promise<string> {
 		try {
