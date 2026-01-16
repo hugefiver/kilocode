@@ -95,7 +95,9 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 			newContent = newContent.split("\n").slice(0, -1).join("\n")
 		}
 
-		if (!task.api.getModel().id.includes("claude")) {
+		const modelResult = task.api.getModel() // kilocode_change
+		const modelId = modelResult instanceof Promise ? (await modelResult).id : modelResult.id // kilocode_change
+		if (!modelId.includes("claude")) { // kilocode_change
 			newContent = unescapeHtmlEntities(newContent)
 		}
 
