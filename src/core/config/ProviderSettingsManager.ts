@@ -714,7 +714,8 @@ export class ProviderSettingsManager {
 					// Try to build an API handler to get model information
 					try {
 						const apiHandler = buildApiHandler(configs[name])
-						const modelInfo = apiHandler.getModel().info
+						const modelResult = apiHandler.getModel() // kilocode_change
+						const modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info // kilocode_change
 
 						// Check if the model supports reasoning budgets
 						const supportsReasoningBudget =

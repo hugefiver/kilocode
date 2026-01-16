@@ -55,7 +55,8 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 	// This avoids relying on an active Cline instance which might not exist during preview
 	try {
 		const tempApiHandler = buildApiHandler(apiConfiguration)
-		modelInfo = tempApiHandler.getModel().info
+		const modelResult = tempApiHandler.getModel() // kilocode_change
+		modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info // kilocode_change
 	} catch (error) {
 		console.error("Error checking if model supports browser capability:", error)
 	}

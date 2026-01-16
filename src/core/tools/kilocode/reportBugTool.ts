@@ -51,7 +51,11 @@ export async function reportBugTool(
 			const kilocodeVersion =
 				vscode.extensions.getExtension("kilocode.kilo-code")?.packageJSON.version || "Unknown"
 			const systemInfo = `VSCode: ${vscode.version}, Node.js: ${process.version}, Architecture: ${os.arch()}`
-			const providerAndModel = `${(await cline.providerRef.deref()?.contextProxy.getGlobalState("apiProvider")) as string} / ${cline.api.getModel().id}`
+			// kilocode_change start: Handle async getModel()
+			const modelResult = cline.api.getModel()
+			const modelId = modelResult instanceof Promise ? (await modelResult).id : modelResult.id
+			const providerAndModel = `${(await cline.providerRef.deref()?.contextProxy.getGlobalState("apiProvider")) as string} / ${modelId}`
+			// kilocode_change end
 
 			// Ask user for confirmation
 			const bugReportData = JSON.stringify({

@@ -773,9 +773,11 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 		}
 
 		// Check protocol for notice formatting - reuse the task's locked protocol
+		const modelResult = cline.api.getModel() // kilocode_change
+		const modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info // kilocode_change
 		const noticeProtocol = resolveToolProtocol(
 			cline.apiConfiguration,
-			cline.api.getModel().info,
+			modelInfo, // kilocode_change
 			cline.taskToolProtocol,
 		)
 		const singleBlockNotice =

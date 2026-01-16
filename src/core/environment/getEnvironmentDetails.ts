@@ -263,7 +263,8 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 	}
 	// kilocode_change end
 
-	const { id: modelId } = cline.api.getModel()
+	const modelResult = cline.api.getModel() // kilocode_change
+	const modelId = modelResult instanceof Promise ? (await modelResult).id : modelResult.id // kilocode_change
 
 	// Add current mode and any mode-specific warnings.
 	const {
@@ -286,7 +287,7 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 	// This ensures the model sees the same tool format it was started with,
 	// even if user settings have changed. Fall back to resolving fresh if
 	// the task hasn't been fully initialized yet (shouldn't happen in practice).
-	const modelInfo = cline.api.getModel().info
+	const modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info // kilocode_change
 	const toolProtocol = resolveToolProtocol(state?.apiConfiguration ?? {}, modelInfo, cline.taskToolProtocol)
 
 	details += `\n\n# Current Mode\n`

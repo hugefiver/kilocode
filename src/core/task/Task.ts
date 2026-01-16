@@ -540,15 +540,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			if (modelResult instanceof Promise) {
 				// For async providers (like VsCodeLmHandler), defer protocol resolution
 				this._taskToolProtocol = undefined
-				modelResult.then((model) => {
-					if (!this._taskToolProtocol) {
-						this._taskToolProtocol = resolveToolProtocol(this.apiConfiguration, model.info)
-					}
-				}).catch((error) => {
-					console.error("Failed to resolve tool protocol from async model:", error)
-					// Fallback to default XML protocol
-					this._taskToolProtocol = "xml"
-				})
+				modelResult
+					.then((model) => {
+						if (!this._taskToolProtocol) {
+							this._taskToolProtocol = resolveToolProtocol(this.apiConfiguration, model.info)
+						}
+					})
+					.catch((error) => {
+						console.error("Failed to resolve tool protocol from async model:", error)
+						// Fallback to default XML protocol
+						this._taskToolProtocol = "xml"
+					})
 			} else {
 				// For sync providers, resolve immediately
 				const modelInfo = modelResult.info
@@ -705,7 +707,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	/**
 	 * Gets model information from the API handler, handling both synchronous and asynchronous providers.
 	 * This is needed because some providers (like VsCodeLmHandler) have async initialization.
-	 * 
+	 *
 	 * @private
 	 * @returns Promise resolving to ModelInfo
 	 */
@@ -719,7 +721,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	/**
 	 * Gets model ID from the API handler, handling both synchronous and asynchronous providers.
-	 * 
+	 *
 	 * @private
 	 * @returns Promise resolving to model ID string
 	 */
@@ -2808,7 +2810,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 				// Cache model info once per API request to avoid repeated calls during streaming
 				// This is especially important for tools and background usage collection
-				this.cachedStreamingModel = this.api.getModel()
+				const modelResult = this.api.getModel() // kilocode_change
+				this.cachedStreamingModel = modelResult instanceof Promise ? await modelResult : modelResult // kilocode_change
 				const streamModelInfo = this.cachedStreamingModel.info
 				const cachedModelId = this.cachedStreamingModel.id
 				// Use the task's locked protocol instead of resolving fresh.
@@ -3973,7 +3976,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					isStealthModel: modelInfo?.isStealthModel,
 				},
 				undefined, // todoList
-				this.api.getModel().id,
+				undefined, // modelId - will be resolved in SYSTEM_PROMPT // kilocode_change
 				provider.getSkillsManager(),
 				state, // kilocode_change
 			)
@@ -4303,8 +4306,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// enabling accurate rewind operations while still sending condensed history to the API.
 		const effectiveHistory = getEffectiveApiHistory(this.apiConversationHistory)
 		const messagesSinceLastSummary = getMessagesSinceLastSummary(effectiveHistory)
-		const messagesWithoutImages = maybeRemoveImageBlocks(messagesSinceLastSummary, this.api)
-		const cleanConversationHistory = this.buildCleanConversationHistory(messagesWithoutImages as ApiMessage[])
+		const messagesWithoutImages = await maybeRemoveImageBlocks(messagesSinceLastSummary, this.api) // kilocode_change
+		const cleanConversationHistory = await this.buildCleanConversationHistory(messagesWithoutImages) // kilocode_change
 
 		// kilocode_change start
 		// Fetch project properties for KiloCode provider tracking
@@ -4595,11 +4598,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		return checkpointSave(this, force, suppressMessage)
 	}
 
-	private buildCleanConversationHistory(
+	private async buildCleanConversationHistory(
+		// kilocode_change
 		messages: ApiMessage[],
-	): Array<
-		Anthropic.Messages.MessageParam | { type: "reasoning"; encrypted_content: string; id?: string; summary?: any[] }
+	): Promise<
+		Array<
+			// kilocode_change
+			| Anthropic.Messages.MessageParam
+			| { type: "reasoning"; encrypted_content: string; id?: string; summary?: any[] }
+		>
 	> {
+		// kilocode_change
 		type ReasoningItemForRequest = {
 			type: "reasoning"
 			encrypted_content: string
@@ -4699,7 +4708,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// Check if the model's preserveReasoning flag is set
 					// If true, include the reasoning block in API requests
 					// If false/undefined, strip it out (stored for history only, not sent back to API)
-					const shouldPreserveForApi = this.api.getModel().info.preserveReasoning === true
+					const modelResult = this.api.getModel() // kilocode_change
+					const modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info // kilocode_change
+					const shouldPreserveForApi = modelInfo.preserveReasoning === true // kilocode_change
 					let assistantContent: Anthropic.Messages.MessageParam["content"]
 
 					if (shouldPreserveForApi) {

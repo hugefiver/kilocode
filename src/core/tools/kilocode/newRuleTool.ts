@@ -57,9 +57,13 @@ export async function newRuleTool(
 		newContent = newContent.split("\n").slice(0, -1).join("\n").trim()
 	}
 
-	if (!cline.api.getModel().id.includes("claude")) {
+	// kilocode_change start: Handle async getModel()
+	const modelResult = cline.api.getModel()
+	const modelId = modelResult instanceof Promise ? (await modelResult).id : modelResult.id
+	if (!modelId.includes("claude")) {
 		newContent = unescapeHtmlEntities(newContent)
 	}
+	// kilocode_change end
 
 	// Determine if the path is outside the workspace
 	const fullPath = relPath ? path.resolve(cline.cwd, removeClosingTag("path", relPath)) : ""
