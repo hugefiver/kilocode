@@ -122,9 +122,9 @@ export class VirtualQuotaFallbackHandler extends EventEmitter implements ApiHand
 		}
 	}
 
-	getModel(): { id: string; info: ModelInfo } {
-		// This is a synchronous method, so we can't await adjustActiveHandler here.
-		// The handler should be adjusted before this method is called.
+	getModel(): { id: string; info: ModelInfo } | Promise<{ id: string; info: ModelInfo }> {
+		// kilocode_change
+		// This method can return either sync or async result depending on the active handler
 		if (!this.activeHandler) {
 			return {
 				id: "",
@@ -150,8 +150,9 @@ export class VirtualQuotaFallbackHandler extends EventEmitter implements ApiHand
 		if (!this.activeHandler) {
 			return 1000000 // Default fallback
 		}
-		const model = this.activeHandler.getModel()
-		return model.info.contextWindow
+		const modelResult = this.activeHandler.getModel() // kilocode_change
+		const modelInfo = modelResult instanceof Promise ? undefined : modelResult.info // kilocode_change
+		return modelInfo?.contextWindow ?? 1000000 // kilocode_change
 	}
 
 	private async loadConfiguredProfiles(): Promise<void> {

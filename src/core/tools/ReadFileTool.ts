@@ -110,7 +110,8 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 	async execute(params: { files: FileEntry[] }, task: Task, callbacks: ToolCallbacks): Promise<void> {
 		const { handleError, pushToolResult, toolProtocol } = callbacks
 		const fileEntries = params.files
-		const modelInfo = task.api.getModel().info
+		const modelResult = task.api.getModel() // kilocode_change
+		const modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info // kilocode_change
 		// Use the task's locked protocol for consistent output formatting throughout the task
 		const protocol = resolveToolProtocol(task.apiConfiguration, modelInfo, task.taskToolProtocol)
 		const useNative = isNativeProtocol(protocol)
@@ -540,7 +541,9 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 						continue
 					}
 
-					const { id: modelId, info: modelInfo } = task.api.getModel()
+					const modelResult = task.api.getModel() // kilocode_change
+					const model = modelResult instanceof Promise ? await modelResult : modelResult // kilocode_change
+					const { id: modelId, info: modelInfo } = model // kilocode_change
 					const { contextTokens } = task.getTokenUsage()
 					const contextWindow = modelInfo.contextWindow
 
@@ -665,7 +668,9 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 
 			const allImages = [...feedbackImages, ...fileImageUrls]
 
-			const finalModelSupportsImages = task.api.getModel().info.supportsImages ?? false
+			const modelResult = task.api.getModel() // kilocode_change
+			const modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info // kilocode_change
+			const finalModelSupportsImages = modelInfo.supportsImages ?? false // kilocode_change
 			const imagesToInclude = finalModelSupportsImages ? allImages : []
 
 			if (statusMessage || imagesToInclude.length > 0) {

@@ -3,9 +3,12 @@ import { ApiMessage } from "../../core/task-persistence/apiMessages"
 import { ApiHandler } from "../index"
 
 /* Removes image blocks from messages if they are not supported by the Api Handler */
-export function maybeRemoveImageBlocks(messages: ApiMessage[], apiHandler: ApiHandler): ApiMessage[] {
+export async function maybeRemoveImageBlocks(messages: ApiMessage[], apiHandler: ApiHandler): Promise<ApiMessage[]> {
+	// kilocode_change
 	// Check model capability ONCE instead of for every message
-	const supportsImages = apiHandler.getModel().info.supportsImages
+	const modelResult = apiHandler.getModel() // kilocode_change
+	const supportsImages =
+		modelResult instanceof Promise ? (await modelResult).info.supportsImages : modelResult.info.supportsImages // kilocode_change
 
 	return messages.map((message) => {
 		// Handle array content (could contain image blocks).

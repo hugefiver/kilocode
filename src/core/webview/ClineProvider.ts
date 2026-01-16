@@ -2191,13 +2191,17 @@ export class ClineProvider
 		// kilocode_change start: Get active model for virtual quota fallback UI display
 		const virtualQuotaActiveModel =
 			apiConfiguration?.apiProvider === "virtual-quota-fallback" && this.getCurrentTask()
-				? {
-						...this.getCurrentTask()!.api.getModel(),
-						activeProfileNumber:
-							this.getCurrentTask()!.api instanceof VirtualQuotaFallbackHandler
-								? (this.getCurrentTask()!.api as VirtualQuotaFallbackHandler).getActiveProfileNumber()
-								: undefined,
-					}
+				? await (async () => {
+						const modelResult = this.getCurrentTask()!.api.getModel()
+						const model = modelResult instanceof Promise ? await modelResult : modelResult
+						return {
+							...model,
+							activeProfileNumber:
+								this.getCurrentTask()!.api instanceof VirtualQuotaFallbackHandler
+									? (this.getCurrentTask()!.api as VirtualQuotaFallbackHandler).getActiveProfileNumber()
+									: undefined,
+						}
+					})()
 				: undefined
 		// kilocode_change end
 
@@ -3349,7 +3353,15 @@ export class ClineProvider
 			// kilocode_change start
 			currentTaskSize: task?.clineMessages.length,
 			taskHistorySize: this.kiloCodeTaskHistorySizeForTelemetryOnly || undefined,
-			toolStyle: resolveToolProtocol(apiConfiguration, task?.api?.getModel().info),
+			toolStyle: resolveToolProtocol(
+				apiConfiguration,
+				task?.api
+					? await (async () => {
+							const modelResult = task.api.getModel()
+							return modelResult instanceof Promise ? (await modelResult).info : modelResult.info
+						})()
+					: undefined,
+			),
 			// kilocode_change end
 		}
 	}
@@ -3389,7 +3401,13 @@ export class ClineProvider
 				if (task?.api instanceof OpenRouterHandler) {
 					return { modelId: (await task.api.fetchModel()).id }
 				} else {
-					return { modelId: task?.api?.getModel().id }
+					// kilocode_change start: Handle async getModel()
+					const modelResult = task?.api?.getModel()
+					if (modelResult instanceof Promise) {
+						return { modelId: (await modelResult).id }
+					}
+					return { modelId: modelResult?.id }
+					// kilocode_change end
 				}
 			} catch (error) {
 				return {

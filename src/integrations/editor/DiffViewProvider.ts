@@ -327,7 +327,11 @@ export class DiffViewProvider {
 		}
 
 		// Check which protocol we're using - use the task's locked protocol for consistency
-		const toolProtocol = resolveToolProtocol(task.apiConfiguration, task.api.getModel().info, task.taskToolProtocol)
+		// kilocode_change start: Handle async getModel() for VsCodeLmHandler
+		const modelResult = task.api.getModel()
+		const modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info
+		const toolProtocol = resolveToolProtocol(task.apiConfiguration, modelInfo, task.taskToolProtocol)
+		// kilocode_change end
 		const useNative = isNativeProtocol(toolProtocol)
 
 		// Build notices array

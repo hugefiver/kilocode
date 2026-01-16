@@ -381,18 +381,35 @@ describe("VsCodeLmHandler", () => {
 			// Initialize client
 			await handler["getClient"]()
 
-			const model = handler.getModel()
+			const model = await handler.getModel() // kilocode_change: getModel is now async
 			expect(model.id).toBe("test-model")
 			expect(model.info).toBeDefined()
 			expect(model.info.contextWindow).toBe(4096)
 		})
 
-		it("should return fallback model info when no client exists", () => {
-			// Clear the client first
-			handler["client"] = null
-			const model = handler.getModel()
-			expect(model.id).toBe("test-vendor/test-family")
+		it("should wait for client initialization automatically", async () => {
+			// kilocode_change start: New test to verify automatic initialization
+			const mockModel = { ...mockLanguageModelChat }
+			;(vscode.lm.selectChatModels as Mock).mockResolvedValueOnce([mockModel])
+
+			// Don't manually initialize - let getModel do it
+			const model = await handler.getModel()
+			expect(model.id).toBe("test-model")
 			expect(model.info).toBeDefined()
+			expect(model.info.contextWindow).toBe(4096)
+			// kilocode_change end
+		})
+
+		it("should return fallback model info when no client exists", async () => {
+			// kilocode_change start: Update for async
+			// Clear the client first and mock to return no models
+			;(vscode.lm.selectChatModels as Mock).mockResolvedValueOnce([])
+			handler["client"] = null
+			const model = await handler.getModel()
+			// With no models available, should create a minimal default model
+			expect(model.id).toBe("default-lm")
+			expect(model.info).toBeDefined()
+			// kilocode_change end
 		})
 
 		it("should return supportsNativeTools and defaultToolProtocol in model info", async () => {
@@ -402,19 +419,47 @@ describe("VsCodeLmHandler", () => {
 			// Initialize client
 			await handler["getClient"]()
 
-			const model = handler.getModel()
+			const model = await handler.getModel() // kilocode_change: getModel is now async
 			expect(model.info.supportsNativeTools).toBe(true)
 			expect(model.info.defaultToolProtocol).toBe("native")
 		})
 
-		it("should return supportsNativeTools and defaultToolProtocol in fallback model info", () => {
-			// Clear the client first
+		it("should return supportsNativeTools and defaultToolProtocol in fallback model info", async () => {
+			// kilocode_change start: Update for async
+			// Clear the client first and mock to return no models
+			;(vscode.lm.selectChatModels as Mock).mockResolvedValueOnce([])
 			handler["client"] = null
-			const model = handler.getModel()
+			const model = await handler.getModel()
 			expect(model.info.supportsNativeTools).toBe(true)
 			expect(model.info.defaultToolProtocol).toBe("native")
+			// kilocode_change end
 		})
 	})
+
+	// kilocode_change start: Add tests for getModelSync
+	describe("getModelSync", () => {
+		it("should return model info immediately when client exists", async () => {
+			const mockModel = { ...mockLanguageModelChat }
+			;(vscode.lm.selectChatModels as Mock).mockResolvedValueOnce([mockModel])
+
+			// Initialize client
+			await handler["getClient"]()
+
+			const model = handler.getModelSync()
+			expect(model.id).toBe("test-model")
+			expect(model.info).toBeDefined()
+			expect(model.info.contextWindow).toBe(4096)
+		})
+
+		it("should return fallback model info immediately when no client exists", () => {
+			// Clear the client first
+			handler["client"] = null
+			const model = handler.getModelSync()
+			expect(model.id).toBe("test-vendor/test-family")
+			expect(model.info).toBeDefined()
+		})
+	})
+	// kilocode_change end
 
 	describe("completePrompt", () => {
 		it("should complete single prompt", async () => {

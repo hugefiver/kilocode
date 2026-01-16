@@ -87,11 +87,12 @@ export async function evaluateGatekeeperApproval(
 
 			// If totalCost is not provided, calculate it using model info
 			if (cost === undefined) {
-				const model = handler.getModel()
-				const modelInfo = model.info
+				const modelResult = handler.getModel() // kilocode_change
+				const modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info // kilocode_change
+				const modelId = modelResult instanceof Promise ? (await modelResult).id : modelResult.id // kilocode_change
 
 				// Determine which cost calculation function to use based on the provider's API protocol
-				const apiProtocol = getApiProtocol(profile.apiProvider, model.id)
+				const apiProtocol = getApiProtocol(profile.apiProvider, modelId) // kilocode_change
 
 				if (apiProtocol === "anthropic") {
 					cost = calculateApiCostAnthropic(

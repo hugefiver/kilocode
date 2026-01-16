@@ -64,7 +64,9 @@ export async function applyDiffTool(
 ) {
 	// Check if native protocol is enabled - if so, always use single-file class-based tool
 	// Use the task's locked protocol for consistency throughout the task lifetime
-	const toolProtocol = resolveToolProtocol(cline.apiConfiguration, cline.api.getModel().info, cline.taskToolProtocol)
+	const modelResult = cline.api.getModel() // kilocode_change
+	const modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info // kilocode_change
+	const toolProtocol = resolveToolProtocol(cline.apiConfiguration, modelInfo, cline.taskToolProtocol) // kilocode_change
 	if (isNativeProtocol(toolProtocol)) {
 		return applyDiffToolClass.handle(cline, block as ToolUse<"apply_diff">, {
 			askApproval,
@@ -323,7 +325,9 @@ Original error: ${errorMessage}`
 				let unified = ""
 				try {
 					const original = await fs.readFile(opResult.absolutePath!, "utf-8")
-					const processed = !cline.api.getModel().id.includes("claude")
+					const modelResult = cline.api.getModel() // kilocode_change
+					const modelId = modelResult instanceof Promise ? (await modelResult).id : modelResult.id // kilocode_change
+					const processed = !modelId.includes("claude") // kilocode_change
 						? (opResult.diffItems || []).map((item) => ({
 								...item,
 								content: item.content ? unescapeHtmlEntities(item.content) : item.content,
@@ -485,7 +489,9 @@ Original error: ${errorMessage}`
 				let formattedError = ""
 
 				// Pre-process all diff items for HTML entity unescaping if needed
-				const processedDiffItems = !cline.api.getModel().id.includes("claude")
+				const modelResult = cline.api.getModel() // kilocode_change
+				const modelId = modelResult instanceof Promise ? (await modelResult).id : modelResult.id // kilocode_change
+				const processedDiffItems = !modelId.includes("claude") // kilocode_change
 					? diffItems.map((item) => ({
 							...item,
 							content: item.content ? unescapeHtmlEntities(item.content) : item.content,
@@ -767,9 +773,11 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 		}
 
 		// Check protocol for notice formatting - reuse the task's locked protocol
+		const modelResult = cline.api.getModel() // kilocode_change
+		const modelInfo = modelResult instanceof Promise ? (await modelResult).info : modelResult.info // kilocode_change
 		const noticeProtocol = resolveToolProtocol(
 			cline.apiConfiguration,
-			cline.api.getModel().info,
+			modelInfo, // kilocode_change
 			cline.taskToolProtocol,
 		)
 		const singleBlockNotice =

@@ -203,7 +203,9 @@ export class GhostModel {
 	public getModelName(): string | undefined {
 		if (!this.apiHandler) return undefined
 
-		return this.apiHandler.getModel().id ?? undefined
+		const modelResult = this.apiHandler.getModel() // kilocode_change
+		const modelId = modelResult instanceof Promise ? undefined : modelResult.id // kilocode_change
+		return modelId ?? undefined // kilocode_change
 	}
 
 	public getProviderDisplayName(): string | undefined {

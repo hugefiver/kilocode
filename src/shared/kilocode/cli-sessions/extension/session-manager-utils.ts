@@ -111,13 +111,25 @@ export function kilo_initializeSessionManager({
 							const currentTask = provider.getCurrentTask()
 
 							if (currentTask?.taskId === taskId) {
-								return currentTask.api?.getModel().id
+								// kilocode_change start: Handle async getModel()
+								const modelResult = currentTask.api?.getModel()
+								if (modelResult instanceof Promise) {
+									return (await modelResult).id
+								}
+								return modelResult?.id
+								// kilocode_change end
 							}
 
 							const state = await provider.getState()
 							const apiHandler = buildApiHandler(state.apiConfiguration)
 
-							return apiHandler.getModel().id
+							// kilocode_change start: Handle async getModel()
+							const modelResult = apiHandler.getModel()
+							if (modelResult instanceof Promise) {
+								return (await modelResult).id
+							}
+							return modelResult.id
+							// kilocode_change end
 						} catch {
 							return undefined
 						}

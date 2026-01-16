@@ -773,7 +773,8 @@ export async function presentAssistantMessage(cline: Task) {
 			// during streaming, pushing multiple tool_results for the same tool_use_id and
 			// potentially causing the stream to appear frozen.
 			if (!block.partial) {
-				const modelInfo = cline.api.getModel()
+				const modelResult = cline.api.getModel() // kilocode_change
+				const modelInfo = modelResult instanceof Promise ? await modelResult : modelResult // kilocode_change
 				// Resolve aliases in includedTools before validation
 				// e.g., "edit_file" should resolve to "apply_diff"
 				const rawIncludedTools = modelInfo?.info?.includedTools
@@ -846,6 +847,13 @@ export async function presentAssistantMessage(cline: Task) {
 
 					// Track tool repetition in telemetry via PostHog exception tracking and event.
 					TelemetryService.instance.captureConsecutiveMistakeError(cline.taskId)
+					// kilocode_change start
+					const repetitionModelResult = cline.api.getModel()
+					const repetitionModelId =
+						repetitionModelResult instanceof Promise
+							? (await repetitionModelResult).id
+							: repetitionModelResult.id
+					// kilocode_change end
 					TelemetryService.instance.captureException(
 						new ConsecutiveMistakeError(
 							`Tool repetition limit reached for ${block.name}`,
@@ -854,7 +862,7 @@ export async function presentAssistantMessage(cline: Task) {
 							cline.consecutiveMistakeLimit,
 							"tool_repetition",
 							cline.apiConfiguration.apiProvider,
-							cline.api.getModel().id,
+							repetitionModelId, // kilocode_change
 						),
 					)
 

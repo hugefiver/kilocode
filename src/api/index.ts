@@ -127,7 +127,7 @@ export interface ApiHandler {
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream
 
-	getModel(): { id: string; info: ModelInfo }
+	getModel(): { id: string; info: ModelInfo } | Promise<{ id: string; info: ModelInfo }> // kilocode_change: Allow both sync and async getModel
 
 	/**
 	 * Counts tokens for content blocks
